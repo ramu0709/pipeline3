@@ -1,75 +1,66 @@
-pipeline{
+node {
+    def mavenHome = tool name: "Maven3.9.9"
 
-agent any
+    buildName "pipe - #${BUILD_NUMBER}"
+    echo "✅ Job: ${env.JOB_NAME}, Node: ${env.NODE_NAME}"
 
-tools{
-maven 'maven3.9.9'
+    properties([
+        buildDiscarder(logRotator(numToKeepStr: '2')),
+        pipelineTriggers([githubPush()])
+    ])
 
+    stage('✅ Checkout Code') {
+        git branch: 'main',
+            credentialsId: '9c54f3a6-d28e-4f8f-97a3-c8e939dcc8ff',
+            url: 'https://github.com/ramu0709/pipeline3.git'
+    }
+
+    def branchName = env.BRANCH_NAME ?: sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()
+    echo "✅ Git Branch: ${branchName}"
+
+    stage('✅ Build') {
+        sh "${mavenHome}/bin/mvn clean package" // no mvn deploy
+    }
+
+    stage('✅ SonarQube') {
+        withSonarQubeEnv('sonarqube') {
+            withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                sh "${mavenHome}/bin/mvn sonar:sonar -Dsonar.login=$SONAR_TOKEN"
+            }
+        }
+    }
+
+    stage('✅ Code Coverage - JaCoCo') {
+        jacoco buildOverBuild: true,
+            changeBuildStatus: true,
+            minimumBranchCoverage: '80',
+            minimumClassCoverage: '80',
+            minimumMethodCoverage: '80',
+            minimumLineCoverage: '80',
+            minimumInstructionCoverage: '80',
+            minimumComplexityCoverage: '80'
+    }
+
+    stage('✅ Upload to Nexus') {
+        def repository = (branchName == "main" || branchName == "master") ? "sample-release" : "sample-snapshot"
+        def version = (branchName == "main" || branchName == "master") ? "0.0.1" : "0.0.1-SNAPSHOT"
+
+        nexusArtifactUploader artifacts: [[
+            artifactId: 'maven-web-application',
+            classifier: '',
+            file: 'target/maven-web-application.war',
+            type: 'war'
+        ]],
+        credentialsId: 'nexus-credentials',
+        groupId: 'Batman',
+        version: version,
+        repository: repository,
+        nexusUrl: '172.21.40.70:8081/',
+        nexusVersion: 'nexus3',
+        protocol: 'http'
+    }
+
+    stage('✅ Deploy to Tomcat') {
+        sh 'sudo cp target/maven-web-application.war /opt/tomcat/webapps/'
+    }
 }
-
-triggers{
-pollSCM('* * * * *')
-}
-
-options{
-timestamps()
-buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '2', daysToKeepStr: '', numToKeepStr: '2'))
-}
-
-stages{
-
-  stage('CheckOutCode'){
-    steps{
-    git branch: 'development', credentialsId: '957b543e-6f77-4cef-9aec-82e9b0230975', url: 'https://github.com/devopstrainingblr/maven-web-application-1.git'
-	
-	}
-  }
-  
-  stage('Build'){
-  steps{
-  sh  "mvn clean package"
-  }
-  }
-/*
- stage('ExecuteSonarQubeReport'){
-  steps{
-  sh  "mvn clean sonar:sonar"
-  }
-  }
-  
-  stage('UploadArtifactsIntoNexus'){
-  steps{
-  sh  "mvn clean deploy"
-  }
-  }
-  
-  stage('DeployAppIntoTomcat'){
-  steps{
-  sshagent(['bfe1b3c1-c29b-4a4d-b97a-c068b7748cd0']) {
-   sh "scp -o StrictHostKeyChecking=no target/maven-web-application.war ec2-user@35.154.190.162:/opt/apache-tomcat-9.0.50/webapps/"    
-  }
-  }
-  }
-  */
-}//Stages Closing
-
-post{
-
- success{
- emailext to: 'devopstrainingblr@gmail.com,mithuntechnologies@yahoo.com',
-          subject: "Pipeline Build is over .. Build # is ..${env.BUILD_NUMBER} and Build status is.. ${currentBuild.result}.",
-          body: "Pipeline Build is over .. Build # is ..${env.BUILD_NUMBER} and Build status is.. ${currentBuild.result}.",
-          replyTo: 'devopstrainingblr@gmail.com'
- }
- 
- failure{
- emailext to: 'devopstrainingblr@gmail.com,mithuntechnologies@yahoo.com',
-          subject: "Pipeline Build is over .. Build # is ..${env.BUILD_NUMBER} and Build status is.. ${currentBuild.result}.",
-          body: "Pipeline Build is over .. Build # is ..${env.BUILD_NUMBER} and Build status is.. ${currentBuild.result}.",
-          replyTo: 'devopstrainingblr@gmail.com'
- }
- 
-}
-
-
-}//Pipeline closing
