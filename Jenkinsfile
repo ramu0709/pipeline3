@@ -58,7 +58,7 @@ node {
         groupId: 'Batman',
         version: version,
         repository: repository,
-        nexusUrl: 'http://172.21.40.70:8081',
+        nexusUrl: '172.21.40.70:8081',
         nexusVersion: 'nexus3',
         protocol: 'http'
     }
