@@ -1,5 +1,5 @@
 node {
-    def mavenHome = tool name: "Maven3.9.9"
+    def mavenHome = tool name: "Maven 3.9.9"
 
     buildName "pipe - #${BUILD_NUMBER}"
     echo "✅ Job: ${env.JOB_NAME}, Node: ${env.NODE_NAME}"
