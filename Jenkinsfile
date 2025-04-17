@@ -23,7 +23,7 @@ node {
     }
 
     stage('✅ SonarQube') {
-        withSonarQubeEnv('sonarqube') {
+        withSonarQubeEnv('SonarQube') {
             withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                 sh "${mavenHome}/bin/mvn sonar:sonar -Dsonar.login=$SONAR_TOKEN"
             }
@@ -55,7 +55,7 @@ node {
         groupId: 'Batman',
         version: version,
         repository: repository,
-        nexusUrl: '172.21.40.70:8081/',
+        nexusUrl: '172.21.40.70:8081',
         nexusVersion: 'nexus3',
         protocol: 'http'
     }
