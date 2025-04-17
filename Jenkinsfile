@@ -24,7 +24,7 @@ node {
 
     stage('✅ SonarQube') {
         withSonarQubeEnv('SonarQube') {
-            // Make sure you have created the 'sonar-token' credentials in Jenkins as a secret text
+            // Make sure you have created the 'sonarqube-token' credentials in Jenkins as a secret text
             withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                 sh """
                     ${mavenHome}/bin/mvn sonar:sonar -Dsonar.login=${SONAR_TOKEN}
